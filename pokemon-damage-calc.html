@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pokémon Damage Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a2e;
+    --border: #2a2a4a;
+    --accent: #e8c84a;
+    --accent2: #ff6b35;
+    --text: #e8e8f0;
+    --text-muted: #7a7a9a;
+    --red: #ff4757;
+    --blue: #4fc3f7;
+    --green: #69f0ae;
+    --purple: #ce93d8;
+
+    /* Type colors */
+    --normal: #a8a77a; --fire: #ee8130; --water: #6390f0; --electric: #f7d02c;
+    --grass: #7ac74c; --ice: #96d9d6; --fighting: #c22e28; --poison: #a33ea1;
+    --ground: #e2bf65; --flying: #a98ff3; --psychic: #f95587; --bug: #a6b91a;
+    --rock: #b6a136; --ghost: #735797; --dragon: #6f35fc; --dark: #705746;
+    --steel: #b7b7ce; --fairy: #d685ad;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* BG scanlines effect */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,200,74,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,200,74,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  header {
+    text-align: center;
+    padding: 40px 0 30px;
+    position: relative;
+  }
+
+  .logo-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(14px, 3vw, 24px);
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(232,200,74,0.5), 0 0 40px rgba(232,200,74,0.2);
+    letter-spacing: 2px;
+    line-height: 1.6;
+    animation: glow 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes glow {
+    from { text-shadow: 0 0 10px rgba(232,200,74,0.4), 0 0 20px rgba(232,200,74,0.2); }
+    to   { text-shadow: 0 0 25px rgba(232,200,74,0.8), 0 0 50px rgba(232,200,74,0.4); }
+  }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .pokeball-deco {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(180deg, var(--red) 50%, white 50%);
+    border: 3px solid var(--border);
+    position: relative;
+    margin: 15px auto;
+    animation: spin 8s linear infinite;
+  }
+  .pokeball-deco::before {
+    content: '';
+    position: absolute;
+    left: -3px; right: -3px;
+    top: 50%; transform: translateY(-50%);
+    height: 3px;
+    background: var(--border);
+  }
+  .pokeball-deco::after {
+    content: '';
+    position: absolute;
+    width: 12px; height: 12px;
+    background: white;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 700px) {
+    .main-grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0.7;
+  }
+
+  .card:hover { border-color: rgba(232,200,74,0.3); }
+
+  .card-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 18px;
+    letter-spacing: 1px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  input[type=number], input[type=text], select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 8px 10px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 13px;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+
+  input::-webkit-outer-spin-button,
+  input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(232,200,74,0.15);
+  }
+
+  select option { background: var(--surface2); }
+
+  .stat-bar-container { margin-bottom: 12px; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 55px 55px;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .stat-bar-wrap {
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .stat-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  .stat-bar.good { background: linear-gradient(90deg, var(--green), #00e676); }
+  .stat-bar.mid  { background: linear-gradient(90deg, var(--accent), #ffb300); }
+  .stat-bar.bad  { background: linear-gradient(90deg, var(--red), #ff6b6b); }
+
+  /* Type badges */
+  .type-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .type-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+
+  .type-badge:hover { transform: scale(1.08); }
+  .type-badge.selected { border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.3); transform: scale(1.1); }
+
+  /* Type effectiveness display */
+  .effectiveness-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .eff-card {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+
+  .eff-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+  .eff-value { font-family: 'Press Start 2P', monospace; font-size: 11px; }
+  .eff-value.super { color: var(--green); }
+  .eff-value.not   { color: var(--red); }
+  .eff-value.neutral { color: var(--text); }
+  .eff-value.immune { color: var(--text-muted); }
+
+  /* Buff selector */
+  .buff-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+  }
+
+  .buff-btn {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    font-family: 'Exo 2', sans-serif;
+  }
+  .buff-btn:hover { background: var(--border); }
+
+  .buff-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    min-width: 30px;
+    text-align: center;
+  }
+
+  .buff-value.positive { color: var(--green); }
+  .buff-value.negative { color: var(--red); }
+  .buff-value.zero     { color: var(--text-muted); }
+
+  .buff-mult {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toggle-row:last-child { border-bottom: none; }
+
+  .toggle-label {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 600;
+  }
+  .toggle-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  .toggle {
+    position: relative;
+    width: 40px; height: 22px;
+    cursor: pointer;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--surface2);
+    border-radius: 22px;
+    border: 1px solid var(--border);
+    transition: 0.3s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 2px; top: 2px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: 0.3s;
+  }
+  .toggle input:checked + .toggle-slider { background: rgba(232,200,74,0.2); border-color: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { background: var(--accent); transform: translateX(18px); }
+
+  /* Results section */
+  .results-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .results-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(232,200,74,0.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .calc-btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    color: #0a0a0f;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .calc-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(232,200,74,0.35);
+  }
+
+  .calc-btn:active { transform: translateY(0); }
+
+  .calc-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+  }
+
+  .damage-display {
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  .damage-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+  }
+
+  .damage-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(28px, 5vw, 48px);
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: pulse-val 0.5s ease-out;
+  }
+
+  @keyframes pulse-val {
+    from { transform: scale(1.3); opacity: 0.5; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  .damage-range {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  .breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .breakdown-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s;
+  }
+  .breakdown-item:hover { border-color: rgba(232,200,74,0.2); }
+
+  .breakdown-item-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .breakdown-item-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--accent);
+  }
+
+  .percent-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .percent-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  /* Formula display */
+  .formula-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 16px;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.8;
+  }
+
+  .formula-box .highlight { color: var(--accent); font-weight: bold; }
+  .formula-box .highlight2 { color: var(--accent2); }
+  .formula-box .highlight3 { color: var(--blue); }
+
+  /* Effectiveness chart */
+  .type-chart-section {
+    margin-top: 20px;
+  }
+
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+
+  /* Nat number badge */
+  .nature-modifier {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-left: 6px;
+  }
+  .nature-up   { background: rgba(105,240,174,0.15); color: var(--green); border: 1px solid rgba(105,240,174,0.3); }
+  .nature-down { background: rgba(255,71,87,0.15); color: var(--red); border: 1px solid rgba(255,71,87,0.3); }
+  .nature-neu  { background: rgba(122,122,154,0.15); color: var(--text-muted); border: 1px solid var(--border); }
+
+  /* Crit banner */
+  .crit-banner {
+    background: linear-gradient(135deg, rgba(255,107,53,0.15), rgba(232,200,74,0.1));
+    border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--accent2);
+    font-weight: 700;
+    text-align: center;
+    margin-top: 10px;
+    display: none;
+  }
+
+  /* Tooltip */
+  .tooltip-wrapper { position: relative; display: inline-block; cursor: help; }
+  .tooltip-wrapper:hover .tooltip { opacity: 1; visibility: visible; }
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e1e2e;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s;
+    z-index: 100;
+    pointer-events: none;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 16px 0;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Weather & terrain */
+  .context-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .context-option {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .context-option:hover { border-color: rgba(232,200,74,0.3); }
+  .context-option.active { border-color: var(--accent); color: var(--accent); background: rgba(232,200,74,0.08); }
+  .context-option .icon { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  footer {
+    text-align: center;
+    padding: 30px 0;
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: 1px;
+    border-top: 1px solid var(--border);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="container">
+
+  <header>
+    <div class="pokeball-deco"></div>
+    <div class="logo-title">⚔ DAMAGE CALCULATOR</div>
+    <div class="subtitle">Gen 9 · Fórmula Oficial Pokémon</div>
+  </header>
+
+  <!-- ATACANTE -->
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-title">⚡ Atacante</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nível</label>
+          <input type="number" id="level" value="50" min="1" max="100">
+        </div>
+        <div class="form-group">
+          <label>Natureza</label>
+          <select id="nature" onchange="updateNatureDisplay()">
+            <option value="neutral">Hardy / Neutra (1.0x)</option>
+            <optgroup label="+Atk / -Def">
+              <option value="atk_up_def_down">Lonely (+Atk/-Def)</option>
+              <option value="atk_up_spa_down">Adamant (+Atk/-SpA)</option>
+              <option value="atk_up_spd_down">Naughty (+Atk/-SpD)</option>
+              <option value="atk_up_spe_down">Brave (+Atk/-Spe)</option>
+            </optgroup>
+            <optgroup label="+Def">
+              <option value="def_up_atk_down">Bold (+Def/-Atk)</option>
+              <option value="def_up_spa_down">Impish (+Def/-SpA)</option>
+              <option value="def_up_spd_down">Lax (+Def/-SpD)</option>
+              <option value="def_up_spe_down">Relaxed (+Def/-Spe)</option>
+            </optgroup>
+            <optgroup label="+SpA">
+              <option value="spa_up_atk_down">Modest (+SpA/-Atk)</option>
+              <option value="spa_up_def_down">Mild (+SpA/-Def)</option>
+              <option value="spa_up_spd_down">Rash (+SpA/-SpD)</option>
+              <option value="spa_up_spe_down">Quiet (+SpA/-Spe)</option>
+            </optgroup>
+            <optgroup label="+SpD">
+              <option value="spd_up_atk_down">Calm (+SpD/-Atk)</option>
+              <option value="spd_up_def_down">Gentle (+SpD/-Def)</option>
+              <option value="spd_up_spa_down">Careful (+SpD/-SpA)</option>
+              <option value="spd_up_spe_down">Sassy (+SpD/-Spe)</option>
+            </optgroup>
+            <optgroup label="+Spe">
+              <option value="spe_up_atk_down">Timid (+Spe/-Atk)</option>
+              <option value="spe_up_def_down">Hasty (+Spe/-Def)</option>
+              <option value="spe_up_spa_down">Jolly (+Spe/-SpA)</option>
+              <option value="spe_up_spd_down">Naive (+Spe/-SpD)</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Stats base + EV + IV Atk -->
+      <div class="stat-bar-container">
+        <div class="stat-row">
+          <span class="stat-label">ATK</span>
+          <div class="stat-bar-wrap"><div class="stat-bar mid" id="bar-atk" style="width:50%"></div></div>
+          <div class="form-group" style="gap:2px">
+            <label style="font-size:8px">BASE</label>
+            <input type="number" id="base-atk" value="90" min="1" max="255" style="padding:4px 6px;font-size:12px">
+          </div>
+          <span id="final-atk" style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--accent);text-align:right;white-space:nowrap"></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>IV (Atk)</label>
+            <input type="number" id="iv-atk" value="31" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>EV (Atk) <span style="color:var(--text-muted);font-size:9px">0-252</span></label>
+            <input type="number" id="ev-atk" value="252" min="0" max="252">
+          </div>
+        </div>
+
+        <div class="stat-row" style="margin-top:8px">
+          <span class="stat-label">SPA</span>
+          <div class="stat-bar-wrap"><div class="stat-bar mid" id="bar-spa" style="width:50%"></div></div>
+          <div class="form-group" style="gap:2px">
+            <label style="font-size:8px">BASE</label>
+            <input type="number" id="base-spa" value="90" min="1" max="255" style="padding:4px 6px;font-size:12px">
+          </div>
+          <span id="final-spa" style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--blue);text-align:right;white-space:nowrap"></span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>IV (SpA)</label>
+            <input type="number" id="iv-spa" value="31" min="0" max="31">
+          </div>
+          <div class="form-group">
+            <label>EV (SpA)</label>
+            <input type="number" id="ev-spa" value="0" min="0" max="252">
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label style="margin-bottom:6px;display:block">Tipo do Atacante</label>
+      <div class="type-grid" id="attacker-types"></div>
+      <div id="attacker-type-selected" style="font-size:10px;color:var(--text-muted);margin-top:6px"></div>
+    </div>
+
+    <!-- DEFENSOR -->
+    <div class="card">
+      <div class="card-title">🛡 Defensor</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>HP Base</label>
+          <input type="number" id="base-hp" value="80" min="1" max="255">
+        </div>
+        <div class="form-group">
+          <label>HP Final (calc.)</label>
+          <input type="number" id="final-hp-input" value="" placeholder="auto" min="1" max="999" style="color:var(--text-muted)">
+        </div>
+      </div>
+
+      <!-- DEF -->
+      <div class="stat-row">
+        <span class="stat-label">DEF</span>
+        <div class="stat-bar-wrap"><div class="stat-bar mid" id="bar-def" style="width:50%"></div></div>
+        <div class="form-group" style="gap:2px">
+          <label style="font-size:8px">BASE</label>
+          <input type="number" id="base-def" value="80" min="1" max="255" style="padding:4px 6px;font-size:12px">
+        </div>
+        <span id="final-def" style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--accent);text-align:right;white-space:nowrap"></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>IV (Def)</label>
+          <input type="number" id="iv-def" value="31" min="0" max="31">
+        </div>
+        <div class="form-group">
+          <label>EV (Def)</label>
+          <input type="number" id="ev-def" value="0" min="0" max="252">
+        </div>
+      </div>
+
+      <!-- SPD -->
+      <div class="stat-row" style="margin-top:8px">
+        <span class="stat-label">SPD</span>
+        <div class="stat-bar-wrap"><div class="stat-bar mid" id="bar-spd" style="width:50%"></div></div>
+        <div class="form-group" style="gap:2px">
+          <label style="font-size:8px">BASE</label>
+          <input type="number" id="base-spd" value="80" min="1" max="255" style="padding:4px 6px;font-size:12px">
+        </div>
+        <span id="final-spd" style="font-family:'Press Start 2P',monospace;font-size:10px;color:var(--blue);text-align:right;white-space:nowrap"></span>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>IV (SpD)</label>
+          <input type="number" id="iv-spd" value="31" min="0" max="31">
+        </div>
+        <div class="form-group">
+          <label>EV (SpD)</label>
+          <input type="number" id="ev-spd" value="0" min="0" max="252">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label style="margin-bottom:6px;display:block">Tipos do Defensor (até 2)</label>
+      <div class="type-grid" id="defender-types"></div>
+      <div id="defender-type-selected" style="font-size:10px;color:var(--text-muted);margin-top:6px"></div>
+    </div>
+  </div>
+
+  <!-- MOVE + MODIFIERS -->
+  <div class="main-grid">
+    <div class="card">
+      <div class="card-title">💥 Movimento</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Poder Base</label>
+          <input type="number" id="move-power" value="90" min="1" max="250">
+        </div>
+        <div class="form-group">
+          <label>Categoria</label>
+          <select id="move-category">
+            <option value="physical">Físico (usa ATK/DEF)</option>
+            <option value="special">Especial (usa SpA/SpD)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group full-width" style="margin-bottom:12px">
+        <label>Tipo do Movimento</label>
+        <div class="type-grid" id="move-types"></div>
+        <div id="move-type-selected" style="font-size:10px;color:var(--text-muted);margin-top:6px"></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-title" style="font-size:9px">Modificadores de Stat</div>
+
+      <div style="display:grid;gap:10px">
+        <div>
+          <label style="margin-bottom:6px;display:block">Buff/Debuff Atacante (Atk ou SpA)</label>
+          <div class="buff-selector">
+            <button class="buff-btn" onclick="changeBuff('atk-buff', -1)">−</button>
+            <span class="buff-value zero" id="atk-buff-display">0</span>
+            <button class="buff-btn" onclick="changeBuff('atk-buff', +1)">+</button>
+            <span class="buff-mult" id="atk-buff-mult">× 1.00</span>
+          </div>
+        </div>
+        <div>
+          <label style="margin-bottom:6px;display:block">Buff/Debuff Defensor (Def ou SpD)</label>
+          <div class="buff-selector">
+            <button class="buff-btn" onclick="changeBuff('def-buff', -1)">−</button>
+            <span class="buff-value zero" id="def-buff-display">0</span>
+            <button class="buff-btn" onclick="changeBuff('def-buff', +1)">+</button>
+            <span class="buff-mult" id="def-buff-mult">× 1.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🌦 Contexto de Batalha</div>
+
+      <label style="margin-bottom:8px;display:block">Clima</label>
+      <div class="context-grid" id="weather-options">
+        <div class="context-option active" data-value="none" onclick="selectContext('weather', 'none', this)"><span class="icon">☀️</span>Sem Clima</div>
+        <div class="context-option" data-value="sun" onclick="selectContext('weather', 'sun', this)"><span class="icon">🌞</span>Sol (Harsh Sun)</div>
+        <div class="context-option" data-value="rain" onclick="selectContext('weather', 'rain', this)"><span class="icon">🌧</span>Chuva (Rain)</div>
+        <div class="context-option" data-value="sand" onclick="selectContext('weather', 'sand', this)"><span class="icon">🏜</span>Areia (Sandstorm)</div>
+        <div class="context-option" data-value="snow" onclick="selectContext('weather', 'snow', this)"><span class="icon">❄️</span>Neve (Snow/Hail)</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label style="margin-bottom:8px;display:block">Terreno</label>
+      <div class="context-grid" id="terrain-options">
+        <div class="context-option active" data-value="none" onclick="selectContext('terrain', 'none', this)"><span class="icon">🌿</span>Sem Terreno</div>
+        <div class="context-option" data-value="electric" onclick="selectContext('terrain', 'electric', this)"><span class="icon">⚡</span>Elétrico</div>
+        <div class="context-option" data-value="grassy" onclick="selectContext('terrain', 'grassy', this)"><span class="icon">🌱</span>Gramado</div>
+        <div class="context-option" data-value="psychic" onclick="selectContext('terrain', 'psychic', this)"><span class="icon">🔮</span>Psíquico</div>
+        <div class="context-option" data-value="misty" onclick="selectContext('terrain', 'misty', this)"><span class="icon">🌫</span>Névoa</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">STAB</div>
+          <div class="toggle-sub">Tipo do move = tipo do atacante (×1.5)</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="stab-toggle" checked><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Crítico</div>
+          <div class="toggle-sub">Critical Hit (×1.5, ignora debuffs)</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="crit-toggle"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Burn (Queimadura)</div>
+          <div class="toggle-sub">Reduz ATK físico à metade</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="burn-toggle"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Tela / Reflect / Light Screen</div>
+          <div class="toggle-sub">Reduz dano em ×0.5</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="screen-toggle"><span class="toggle-slider"></span></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTÃO + RESULTADO -->
+  <div class="results-card">
+    <button class="calc-btn" onclick="calculate()">⚔ CALCULAR DANO ⚔</button>
+
+    <div id="result-section" style="display:none">
+      <div class="damage-display">
+        <div class="damage-label">Dano Calculado</div>
+        <div class="damage-value" id="damage-result">---</div>
+        <div class="damage-range" id="damage-range"></div>
+        <div class="damage-range" id="damage-percent"></div>
+        <div class="crit-banner" id="crit-banner">⚡ CRÍTICO! Dano aumentado em ×1.5</div>
+      </div>
+
+      <div class="breakdown-grid" id="breakdown-grid"></div>
+
+      <div class="divider"></div>
+
+      <div class="section-title">📐 Fórmula Utilizada</div>
+      <div class="formula-box" id="formula-box"></div>
+    </div>
+  </div>
+
+  <!-- TABELA EFETIVIDADE -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-title">📊 Efetividade do Tipo</div>
+    <div class="effectiveness-row" id="effectiveness-display">
+      <div class="eff-card"><div class="eff-label">Multiplicador</div><div class="eff-value neutral" id="eff-multiplier">—</div></div>
+      <div class="eff-card"><div class="eff-label">Resultado</div><div class="eff-value neutral" id="eff-result">—</div></div>
+      <div class="eff-card"><div class="eff-label">STAB</div><div class="eff-value neutral" id="stab-result">—</div></div>
+    </div>
+  </div>
+
+  <footer>Fórmula Gen 8/9 · © Pokémon é marca da Nintendo/Game Freak · Calculadora educacional</footer>
+</div>
+
+<script>
+// ===================== DATA =====================
+const TYPES = ['Normal','Fire','Water','Electric','Grass','Ice','Fighting','Poison','Ground','Flying','Psychic','Bug','Rock','Ghost','Dragon','Dark','Steel','Fairy'];
+
+const TYPE_COLORS = {
+  Normal:'#a8a77a',Fire:'#ee8130',Water:'#6390f0',Electric:'#f7d02c',
+  Grass:'#7ac74c',Ice:'#96d9d6',Fighting:'#c22e28',Poison:'#a33ea1',
+  Ground:'#e2bf65',Flying:'#a98ff3',Psychic:'#f95587',Bug:'#a6b91a',
+  Rock:'#b6a136',Ghost:'#735797',Dragon:'#6f35fc',Dark:'#705746',
+  Steel:'#b7b7ce',Fairy:'#d685ad'
+};
+
+// TYPE CHART: attacking type → defending type → multiplier
+const TYPE_CHART = {
+  Normal:   {Rock:0.5,Ghost:0,Steel:0.5},
+  Fire:     {Fire:0.5,Water:0.5,Grass:2,Ice:2,Bug:2,Rock:0.5,Dragon:0.5,Steel:2},
+  Water:    {Fire:2,Water:0.5,Grass:0.5,Ground:2,Rock:2,Dragon:0.5},
+  Electric: {Water:2,Electric:0.5,Grass:0.5,Ground:0,Flying:2,Dragon:0.5},
+  Grass:    {Fire:0.5,Water:2,Grass:0.5,Poison:0.5,Ground:2,Flying:0.5,Bug:0.5,Rock:2,Dragon:0.5,Steel:0.5},
+  Ice:      {Fire:0.5,Water:0.5,Grass:2,Ice:0.5,Ground:2,Flying:2,Dragon:2,Steel:0.5},
+  Fighting: {Normal:2,Ice:2,Poison:0.5,Flying:0.5,Psychic:0.5,Bug:0.5,Rock:2,Ghost:0,Dark:2,Steel:2,Fairy:0.5},
+  Poison:   {Grass:2,Poison:0.5,Ground:0.5,Rock:0.5,Ghost:0.5,Steel:0,Fairy:2},
+  Ground:   {Fire:2,Electric:2,Grass:0.5,Poison:2,Flying:0,Bug:0.5,Rock:2,Steel:2},
+  Flying:   {Electric:0.5,Grass:2,Fighting:2,Bug:2,Rock:0.5,Steel:0.5},
+  Psychic:  {Fighting:2,Poison:2,Psychic:0.5,Dark:0,Steel:0.5},
+  Bug:      {Fire:0.5,Grass:2,Fighting:0.5,Flying:0.5,Psychic:2,Ghost:0.5,Dark:2,Steel:0.5,Fairy:0.5},
+  Rock:     {Fire:2,Ice:2,Fighting:0.5,Ground:0.5,Flying:2,Bug:2,Steel:0.5},
+  Ghost:    {Normal:0,Psychic:2,Ghost:2,Dark:0.5},
+  Dragon:   {Dragon:2,Steel:0.5,Fairy:0},
+  Dark:     {Fighting:0.5,Psychic:2,Ghost:2,Dark:0.5,Fairy:0.5},
+  Steel:    {Fire:0.5,Water:0.5,Electric:0.5,Ice:2,Rock:2,Steel:0.5,Fairy:2},
+  Fairy:    {Fire:0.5,Fighting:2,Poison:0.5,Dragon:2,Dark:2,Steel:0.5}
+};
+
+const NATURE_MODIFIERS = {
+  neutral:       {atk:1,def:1,spa:1,spd:1,spe:1},
+  atk_up_def_down:{atk:1.1,def:0.9,spa:1,spd:1,spe:1},
+  atk_up_spa_down:{atk:1.1,def:1,spa:0.9,spd:1,spe:1},
+  atk_up_spd_down:{atk:1.1,def:1,spa:1,spd:0.9,spe:1},
+  atk_up_spe_down:{atk:1.1,def:1,spa:1,spd:1,spe:0.9},
+  def_up_atk_down:{atk:0.9,def:1.1,spa:1,spd:1,spe:1},
+  def_up_spa_down:{atk:1,def:1.1,spa:0.9,spd:1,spe:1},
+  def_up_spd_down:{atk:1,def:1.1,spa:1,spd:0.9,spe:1},
+  def_up_spe_down:{atk:1,def:1.1,spa:1,spd:1,spe:0.9},
+  spa_up_atk_down:{atk:0.9,def:1,spa:1.1,spd:1,spe:1},
+  spa_up_def_down:{atk:1,def:0.9,spa:1.1,spd:1,spe:1},
+  spa_up_spd_down:{atk:1,def:1,spa:1.1,spd:0.9,spe:1},
+  spa_up_spe_down:{atk:1,def:1,spa:1.1,spd:1,spe:0.9},
+  spd_up_atk_down:{atk:0.9,def:1,spa:1,spd:1.1,spe:1},
+  spd_up_def_down:{atk:1,def:0.9,spa:1,spd:1.1,spe:1},
+  spd_up_spa_down:{atk:1,def:1,spa:0.9,spd:1.1,spe:1},
+  spd_up_spe_down:{atk:1,def:1,spa:1,spd:1.1,spe:0.9},
+  spe_up_atk_down:{atk:0.9,def:1,spa:1,spd:1,spe:1.1},
+  spe_up_def_down:{atk:1,def:0.9,spa:1,spd:1,spe:1.1},
+  spe_up_spa_down:{atk:1,def:1,spa:0.9,spd:1,spe:1.1},
+  spe_up_spd_down:{atk:1,def:1,spa:1,spd:0.9,spe:1.1},
+};
+
+const BUFF_MULTS = {'-6':0.25,'-5':0.28,'-4':0.33,'-3':0.4,'-2':0.5,'-1':0.66,'0':1,'1':1.5,'2':2,'3':2.5,'4':3,'5':3.5,'6':4};
+const BUFF_MULTS_DEF = {'-6':4,'-5':3.5,'-4':3,'-3':2.5,'-2':2,'-1':1.5,'0':1,'1':0.66,'2':0.5,'3':0.4,'4':0.33,'5':0.28,'6':0.25};
+
+// State
+const state = {
+  attackerTypes: [],
+  defenderTypes: [],
+  moveType: 'Normal',
+  atkBuff: 0,
+  defBuff: 0,
+  weather: 'none',
+  terrain: 'none'
+};
+
+// ===================== INIT =====================
+function buildTypeSelectors() {
+  buildTypeGrid('attacker-types', (type) => {
+    if (state.attackerTypes.includes(type)) {
+      state.attackerTypes = state.attackerTypes.filter(t => t !== type);
+    } else if (state.attackerTypes.length < 2) {
+      state.attackerTypes.push(type);
+    }
+    updateTypeDisplay();
+    updateStabAuto();
+  });
+
+  buildTypeGrid('defender-types', (type) => {
+    if (state.defenderTypes.includes(type)) {
+      state.defenderTypes = state.defenderTypes.filter(t => t !== type);
+    } else if (state.defenderTypes.length < 2) {
+      state.defenderTypes.push(type);
+    }
+    updateTypeDisplay();
+  });
+
+  buildTypeGrid('move-types', (type) => {
+    state.moveType = type;
+    updateTypeDisplay();
+    updateStabAuto();
+    updateEffectivenessPreview();
+  }, true);
+}
+
+function buildTypeGrid(containerId, onClick, single = false) {
+  const container = document.getElementById(containerId);
+  TYPES.forEach(type => {
+    const badge = document.createElement('span');
+    badge.className = 'type-badge';
+    badge.textContent = getTypePT(type);
+    badge.style.background = TYPE_COLORS[type];
+    badge.dataset.type = type;
+    badge.onclick = () => {
+      if (single) {
+        container.querySelectorAll('.type-badge').forEach(b => b.classList.remove('selected'));
+      }
+      badge.classList.toggle('selected');
+      onClick(type);
+    };
+    container.appendChild(badge);
+  });
+  // Select Normal by default for move type
+  if (single) {
+    container.querySelector('[data-type="Normal"]').classList.add('selected');
+  }
+}
+
+function getTypePT(type) {
+  const map = {
+    Normal:'Normal',Fire:'Fogo',Water:'Água',Electric:'Elétrico',Grass:'Planta',
+    Ice:'Gelo',Fighting:'Lutador',Poison:'Veneno',Ground:'Terra',Flying:'Voador',
+    Psychic:'Psíquico',Bug:'Inseto',Rock:'Pedra',Ghost:'Fantasma',Dragon:'Dragão',
+    Dark:'Sombrio',Steel:'Aço',Fairy:'Fada'
+  };
+  return map[type] || type;
+}
+
+function updateTypeDisplay() {
+  document.getElementById('attacker-type-selected').textContent =
+    state.attackerTypes.length ? 'Selecionado: ' + state.attackerTypes.map(getTypePT).join(', ') : 'Nenhum selecionado';
+  document.getElementById('defender-type-selected').textContent =
+    state.defenderTypes.length ? 'Selecionado: ' + state.defenderTypes.map(getTypePT).join(', ') : 'Nenhum selecionado';
+  document.getElementById('move-type-selected').textContent =
+    'Tipo: ' + getTypePT(state.moveType);
+
+  // Sync attacker type grid
+  document.querySelectorAll('#attacker-types .type-badge').forEach(b => {
+    b.classList.toggle('selected', state.attackerTypes.includes(b.dataset.type));
+  });
+  document.querySelectorAll('#defender-types .type-badge').forEach(b => {
+    b.classList.toggle('selected', state.defenderTypes.includes(b.dataset.type));
+  });
+
+  updateEffectivenessPreview();
+}
+
+function updateStabAuto() {
+  const stab = state.attackerTypes.includes(state.moveType);
+  document.getElementById('stab-toggle').checked = stab;
+}
+
+// ===================== STATS CALC =====================
+function calcStat(base, iv, ev, level, natureMod, isHP = false) {
+  base = parseInt(base) || 0;
+  iv = Math.min(31, Math.max(0, parseInt(iv) || 0));
+  ev = Math.min(252, Math.max(0, parseInt(ev) || 0));
+  level = parseInt(level) || 50;
+  if (isHP) {
+    return Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + level + 10);
+  }
+  return Math.floor((Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level / 100) + 5) * natureMod));
+}
+
+function updateStatBars() {
+  const level = parseInt(document.getElementById('level').value) || 50;
+  const natureMod = NATURE_MODIFIERS[document.getElementById('nature').value] || NATURE_MODIFIERS.neutral;
+
+  const atk = calcStat(
+    document.getElementById('base-atk').value,
+    document.getElementById('iv-atk').value,
+    document.getElementById('ev-atk').value,
+    level, natureMod.atk
+  );
+  const spa = calcStat(
+    document.getElementById('base-spa').value,
+    document.getElementById('iv-spa').value,
+    document.getElementById('ev-spa').value,
+    level, natureMod.spa
+  );
+  const def = calcStat(
+    document.getElementById('base-def').value,
+    document.getElementById('iv-def').value,
+    document.getElementById('ev-def').value,
+    level, natureMod.def
+  );
+  const spd = calcStat(
+    document.getElementById('base-spd').value,
+    document.getElementById('iv-spd').value,
+    document.getElementById('ev-spd').value,
+    level, natureMod.spd
+  );
+
+  document.getElementById('final-atk').textContent = atk;
+  document.getElementById('final-spa').textContent = spa;
+  document.getElementById('final-def').textContent = def;
+  document.getElementById('final-spd').textContent = spd;
+
+  const updateBar = (id, val, max=300) => {
+    const pct = Math.min(100, (val / max) * 100);
+    const el = document.getElementById(id);
+    el.style.width = pct + '%';
+    el.className = 'stat-bar ' + (pct > 60 ? 'good' : pct > 35 ? 'mid' : 'bad');
+  };
+  updateBar('bar-atk', atk); updateBar('bar-spa', spa);
+  updateBar('bar-def', def); updateBar('bar-spd', spd);
+}
+
+// ===================== BUFFS =====================
+const buffState = {'atk-buff': 0, 'def-buff': 0};
+
+function changeBuff(id, delta) {
+  buffState[id] = Math.min(6, Math.max(-6, (buffState[id] || 0) + delta));
+  const val = buffState[id];
+  const el = document.getElementById(id + '-display');
+  el.textContent = val > 0 ? '+' + val : val;
+  el.className = 'buff-value ' + (val > 0 ? 'positive' : val < 0 ? 'negative' : 'zero');
+
+  if (id === 'atk-buff') {
+    document.getElementById('atk-buff-mult').textContent = '× ' + BUFF_MULTS[String(val)].toFixed(2);
+  } else {
+    // Def buff increases defense
+    const defMult = val >= 0 ? 1 / BUFF_MULTS[String(val)] : BUFF_MULTS_DEF[String(val)];
+    document.getElementById('def-buff-mult').textContent = '× ' + (1 / BUFF_MULTS[String(-val)]).toFixed(2) + ' (defesa)';
+  }
+}
+
+// ===================== CONTEXT =====================
+function selectContext(type, value, el) {
+  const group = type === 'weather' ? 'weather-options' : 'terrain-options';
+  document.querySelectorAll('#' + group + ' .context-option').forEach(o => o.classList.remove('active'));
+  el.classList.add('active');
+  state[type] = value;
+}
+
+// ===================== EFFECTIVENESS =====================
+function getTypeEffectiveness(moveType, defTypes) {
+  let mult = 1;
+  defTypes.forEach(defType => {
+    const row = TYPE_CHART[moveType] || {};
+    mult *= (row[defType] !== undefined ? row[defType] : 1);
+  });
+  return mult;
+}
+
+function updateEffectivenessPreview() {
+  const eff = getTypeEffectiveness(state.moveType, state.defenderTypes);
+  const stab = document.getElementById('stab-toggle') ? document.getElementById('stab-toggle').checked : false;
+
+  const effEl = document.getElementById('eff-multiplier');
+  const resEl = document.getElementById('eff-result');
+  const stabEl = document.getElementById('stab-result');
+
+  effEl.textContent = '× ' + eff;
+  effEl.className = 'eff-value ' + (eff > 1 ? 'super' : eff < 1 && eff > 0 ? 'not' : eff === 0 ? 'immune' : 'neutral');
+
+  const labels = {0:'Imune',0.25:'Muito Resistente',0.5:'Resistente',1:'Normal',2:'Super Efetivo',4:'Ultra Efetivo'};
+  resEl.textContent = labels[eff] || (eff > 1 ? 'Super Efetivo' : 'Resistente');
+  resEl.className = 'eff-value ' + (eff > 1 ? 'super' : eff < 1 && eff > 0 ? 'not' : eff === 0 ? 'immune' : 'neutral');
+
+  stabEl.textContent = stab ? '× 1.5 (STAB)' : '× 1.0';
+  stabEl.className = 'eff-value ' + (stab ? 'super' : 'neutral');
+}
+
+// ===================== NATURE DISPLAY =====================
+function updateNatureDisplay() { updateStatBars(); }
+
+// ===================== MAIN CALCULATION =====================
+function calculate() {
+  const level    = parseInt(document.getElementById('level').value) || 50;
+  const natureMod = NATURE_MODIFIERS[document.getElementById('nature').value] || NATURE_MODIFIERS.neutral;
+
+  const isSpecial = document.getElementById('move-category').value === 'special';
+  const basePower  = parseInt(document.getElementById('move-power').value) || 1;
+
+  // Attacker stat
+  const atkBaseStat = isSpecial
+    ? calcStat(document.getElementById('base-spa').value, document.getElementById('iv-spa').value, document.getElementById('ev-spa').value, level, natureMod.spa)
+    : calcStat(document.getElementById('base-atk').value, document.getElementById('iv-atk').value, document.getElementById('ev-atk').value, level, natureMod.atk);
+
+  // Defender stat
+  const defBaseStat = isSpecial
+    ? calcStat(document.getElementById('base-spd').value, document.getElementById('iv-spd').value, document.getElementById('ev-spd').value, level, 1)
+    : calcStat(document.getElementById('base-def').value, document.getElementById('iv-def').value, document.getElementById('ev-def').value, level, 1);
+
+  // HP
+  const hpFinalInput = parseInt(document.getElementById('final-hp-input').value);
+  const defHP = hpFinalInput || calcStat(document.getElementById('base-hp').value, 31, 0, level, 1, true);
+
+  const isCrit = document.getElementById('crit-toggle').checked;
+  const stab   = document.getElementById('stab-toggle').checked;
+  const burn   = document.getElementById('burn-toggle').checked;
+  const screen = document.getElementById('screen-toggle').checked;
+
+  // Buffs
+  const atkBuffVal = buffState['atk-buff'] || 0;
+  const defBuffVal = buffState['def-buff'] || 0;
+
+  let atkMult = BUFF_MULTS[String(atkBuffVal)];
+  // On crit, positive def buffs on defender are ignored
+  let defMult;
+  if (isCrit && defBuffVal > 0) {
+    defMult = 1;
+  } else {
+    // Defender's def buff: positive raises defense, negative lowers
+    defMult = defBuffVal >= 0 ? (1 + defBuffVal * 0.5 === 1 ? 1 : defBuffVal === 0 ? 1 : BUFF_MULTS[String(defBuffVal)]) : BUFF_MULTS[String(defBuffVal)];
+    // Actually: defender stage → BUFF_MULTS gives attack multiplier
+    // For defense stages: +1 = ×1.5 defense = attacker does ×0.66
+    defMult = 1 / BUFF_MULTS[String(defBuffVal)]; // inverse because it's defense
+    // Re-correct: BUFF_MULTS[0]=1, [1]=1.5, so defense at +1 = 1.5x harder to damage
+    defMult = BUFF_MULTS[String(defBuffVal)]; // this is the defense multiplier itself
+  }
+
+  // Apply atk buff (crit ignores negative atk stage on attacker)
+  let A = atkBaseStat;
+  if (isCrit && atkBuffVal < 0) {
+    A = A; // ignore negative
+  } else {
+    A = Math.floor(A * BUFF_MULTS[String(atkBuffVal)]);
+  }
+
+  // Apply def buff
+  let D = defBaseStat;
+  if (isCrit && defBuffVal > 0) {
+    D = D; // ignore positive defense buffs on crit
+  } else {
+    D = Math.floor(D * BUFF_MULTS[String(defBuffVal)]);
+  }
+
+  // Burn
+  if (burn && !isSpecial) A = Math.floor(A * 0.5);
+
+  // Type effectiveness
+  const typeEff = getTypeEffectiveness(state.moveType, state.defenderTypes.length ? state.defenderTypes : ['Normal']);
+
+  // Weather modifier
+  let weatherMod = 1;
+  const moveType = state.moveType;
+  if (state.weather === 'sun')  { if (moveType === 'Fire') weatherMod = 1.5; if (moveType === 'Water') weatherMod = 0.5; }
+  if (state.weather === 'rain') { if (moveType === 'Water') weatherMod = 1.5; if (moveType === 'Fire') weatherMod = 0.5; }
+  if (state.weather === 'snow') { if (!isSpecial && state.defenderTypes.includes('Ice')) weatherMod = 1.5; }
+
+  // Terrain modifier (Gen 8+)
+  let terrainMod = 1;
+  if (state.terrain === 'electric' && moveType === 'Electric') terrainMod = 1.3;
+  if (state.terrain === 'grassy'   && moveType === 'Grass')    terrainMod = 1.3;
+  if (state.terrain === 'psychic'  && moveType === 'Psychic')  terrainMod = 1.3;
+  if (state.terrain === 'misty'    && moveType === 'Dragon')   terrainMod = 0.5;
+
+  // STAB
+  const stabMod = stab ? 1.5 : 1;
+
+  // Crit modifier
+  const critMod = isCrit ? 1.5 : 1;
+
+  // Screen
+  const screenMod = (screen && !isCrit) ? 0.5 : 1;
+
+  // Damage formula (Gen 5+):
+  // Damage = floor(floor(floor(2*Level/5+2) * Power * A/D / 50) + 2) * Modifiers
+  const base = Math.floor(Math.floor(Math.floor(2 * level / 5 + 2) * basePower * A / D) / 50) + 2;
+
+  // Apply mods sequentially
+  let damage = base;
+  damage = Math.floor(damage * weatherMod);
+  damage = Math.floor(damage * critMod);
+  damage = Math.floor(damage * (85 / 100)); // min roll for min display; we'll calc range
+  damage = Math.floor(damage * stabMod);
+  damage = Math.floor(damage * typeEff);
+  damage = Math.floor(damage * screenMod);
+  damage = Math.floor(damage * terrainMod);
+
+  // Min/max roll range (85/100 to 100/100)
+  const minDamage = calcDamageRoll(85, level, basePower, A, D, weatherMod, critMod, stabMod, typeEff, screenMod, terrainMod);
+  const maxDamage = calcDamageRoll(100, level, basePower, A, D, weatherMod, critMod, stabMod, typeEff, screenMod, terrainMod);
+
+  showResults({
+    damage: maxDamage, minDamage, maxDamage, defHP,
+    A, D, basePower, stabMod, typeEff, critMod, weatherMod,
+    terrainMod, screenMod, atkBuffVal, defBuffVal, burn,
+    level, isCrit, stab, isSpecial
+  });
+}
+
+function calcDamageRoll(roll, level, power, A, D, weather, crit, stab, typeEff, screen, terrain) {
+  let d = Math.floor(Math.floor(Math.floor(2 * level / 5 + 2) * power * A / D) / 50) + 2;
+  d = Math.floor(d * weather);
+  d = Math.floor(d * crit);
+  d = Math.floor(d * (roll / 100));
+  d = Math.floor(d * stab);
+  d = Math.floor(d * typeEff);
+  d = Math.floor(d * screen);
+  d = Math.floor(d * terrain);
+  return Math.max(1, d);
+}
+
+function showResults(r) {
+  document.getElementById('result-section').style.display = 'block';
+  document.getElementById('damage-result').textContent = r.maxDamage;
+
+  const pctMin = ((r.minDamage / r.defHP) * 100).toFixed(1);
+  const pctMax = ((r.maxDamage / r.defHP) * 100).toFixed(1);
+
+  document.getElementById('damage-range').textContent =
+    `Intervalo: ${r.minDamage} – ${r.maxDamage} de dano`;
+  document.getElementById('damage-percent').textContent =
+    `${pctMin}% – ${pctMax}% do HP máximo do defensor (${r.defHP} HP)`;
+
+  const critBanner = document.getElementById('crit-banner');
+  critBanner.style.display = r.isCrit ? 'block' : 'none';
+
+  // Breakdown
+  const effLabel = {0:'Imune (×0)',0.25:'×0.25',0.5:'×0.5',1:'×1',2:'×2',4:'×4'}[r.typeEff] || '×' + r.typeEff;
+  const breakdowns = [
+    { label: 'Stat Ataque', value: r.A, max: 600 },
+    { label: 'Stat Defesa', value: r.D, max: 600 },
+    { label: 'Poder Base', value: r.basePower, max: 250 },
+    { label: 'Efetividade', value: effLabel, pct: Math.min(100, r.typeEff / 4 * 100) },
+    { label: 'STAB', value: r.stab ? '×1.5' : '×1.0', pct: r.stab ? 100 : 50 },
+    { label: 'Crítico', value: r.isCrit ? '×1.5' : '—', pct: r.isCrit ? 100 : 0 },
+    { label: 'Clima', value: r.weatherMod !== 1 ? '×' + r.weatherMod : '—', pct: r.weatherMod > 1 ? 80 : r.weatherMod < 1 ? 20 : 0 },
+    { label: 'Terreno', value: r.terrainMod !== 1 ? '×' + r.terrainMod : '—', pct: r.terrainMod !== 1 ? 70 : 0 },
+  ];
+
+  const grid = document.getElementById('breakdown-grid');
+  grid.innerHTML = breakdowns.map(b => {
+    const pct = b.pct !== undefined ? b.pct : Math.min(100, (b.value / b.max) * 100);
+    return `<div class="breakdown-item">
+      <div class="breakdown-item-label">${b.label}</div>
+      <div class="breakdown-item-value">${b.value}</div>
+      <div class="percent-bar"><div class="percent-bar-fill" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Formula
+  const category = r.isSpecial ? 'SpA / SpD' : 'Atk / Def';
+  document.getElementById('formula-box').innerHTML = `
+<span class="highlight">Dano</span> = floor(floor(floor(<span class="highlight2">2 × Nível</span> / 5 + 2) × <span class="highlight">Poder</span> × <span class="highlight2">A</span> / <span class="highlight3">D</span>) / 50 + 2) × <span class="highlight">Modificadores</span>
+<br>
+<span class="highlight2">Nível</span> = ${r.level} &nbsp;|&nbsp; <span class="highlight">Poder</span> = ${r.basePower} &nbsp;|&nbsp; <span class="highlight2">A</span> = ${r.A} (${category}) &nbsp;|&nbsp; <span class="highlight3">D</span> = ${r.D}
+<br>
+Base calc = <span class="highlight">${Math.floor(Math.floor(Math.floor(2*r.level/5+2) * r.basePower * r.A / r.D)/50)+2}</span>
+&nbsp;× clima(${r.weatherMod}) × crit(${r.critMod}) × roll(0.85~1.00)
+× STAB(${r.stabMod}) × tipo(${r.typeEff}) × tela(${r.screenMod}) × terreno(${r.terrainMod})
+<br>
+<span style="color:var(--green)">Resultado Final: ${r.minDamage} ~ ${r.maxDamage}</span>
+  `;
+
+  // Scroll to result
+  document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  updateEffectivenessPreview();
+}
+
+// ===================== LIVE UPDATE =====================
+document.addEventListener('DOMContentLoaded', () => {
+  buildTypeSelectors();
+  updateStatBars();
+  updateTypeDisplay();
+
+  document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', updateStatBars);
+  });
+
+  document.getElementById('stab-toggle').addEventListener('change', updateEffectivenessPreview);
+});
+</script>
+</body>
+</html>
